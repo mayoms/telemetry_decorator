@@ -60,6 +60,8 @@ defmodule TelemetryDecorator do
   """
   def telemetry(event_name, opts \\ [], body, context) do
     {include, opts} = Keyword.pop(opts, :include, [])
+    {tags, opts} = Keyword.pop(opts, :tags, [])
+
     for {k, _} <- opts, do: raise(ArgumentError, "no such option: #{k}")
 
     if not (is_list(event_name) and atoms_only?(event_name) and not Enum.empty?(event_name)),
@@ -69,6 +71,8 @@ defmodule TelemetryDecorator do
 
     if not (is_list(include) and atoms_only?(include)),
       do: raise(ArgumentError, "include option must be a list of atoms")
+
+    caller = "#{inspect(context.module)}.#{context.name}/#{context.arity}"
 
     quote location: :keep do
       metadata = Enum.into(Kernel.binding(), %{})
@@ -80,6 +84,8 @@ defmodule TelemetryDecorator do
           Kernel.binding()
           |> Keyword.take(unquote(include))
           |> Keyword.put_new(:result, result)
+          |> Keyword.put_new(:tags, unquote(tags))
+          |> Keyword.put_new(:caller, unquote(caller))
           |> Enum.into(metadata)
 
         {result, metadata}
